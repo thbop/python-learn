@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template, request
 from calc import *
 
 app = Flask(__name__)
@@ -16,15 +16,28 @@ HTTP Methods:
 """
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-    output = ""
+    return render_template("index.html")
+
+@app.route("/calc", methods=["GET", "POST"])
+def calc():
+    result = ""
     if request.method == "POST":
-        ui = request.form.get("user_input").split(' ')
-        output = execute_operation(float(ui[0]), float(ui[2]), ui[1])
-    return render_template("index.html", output=output)
+        user_input = request.form.get("user_input").strip()
 
+        args = user_input.split()
+        num1 = float(args[0])
+        num2 = float(args[2])
+        operator = args[1]
+        result = execute_operation(num1, num2, operator)
 
+    return render_template("calc.html", value=result)
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
+

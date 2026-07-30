@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Calculator</title>
+    </head>
+    <body>
+        <h1>Calculator</h1>
+        
+        <a href="/">Home</a>
+
+        <form action="/calc" method="POST">
+            <label>Input: </label>
+            <input name="user_input" type="text" autofocus/>
+            {{ value }}
+        </form>
+
+        <canvas id="myCanvas" width="1000px" height="500px"></canvas>
+
+        <script>
+            const canvas = document.getElementById("myCanvas")
+            const ctx = canvas.getContext("2d");
+            
+            const f = (x) => 0.001*x*x*x;
+            // f = lambda x: 0.001*x**3
+
+            ctx.beginPath();
+            ctx.moveTo(0,250);
+
+            for ( let i = 0; i < 1000; i++ ) {
+                ctx.lineTo(i, 250 - f(i - 500));
+            }
+
+            ctx.stroke();
+        </script>
+
+    </body>
+</html>
