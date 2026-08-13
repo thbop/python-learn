@@ -1,6 +1,7 @@
 import math
-import glm
+from pyglm import glm
 import pygame
+
 
 def fov_to_focal_length(fov: float) -> float:
     """Converts a Field of View in degrees to focal length in world units."""
@@ -19,7 +20,10 @@ def normalized_coordinates_to_window_coordinates(point: glm.vec2, window_size: g
     edge at -1, right at 1, bottom at -1, and top at 1.
     """
 
+    ratio = window_size.y / window_size.x
+
     return pygame.math.Vector2(
-        (point.x + 1.0) * window_size.x * 0.5,
+        (point.x * ratio + 1.0) * window_size.x * 0.5,
         (-point.y + 1.0) * window_size.y * 0.5,
     )
+

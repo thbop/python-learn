@@ -1,17 +1,40 @@
 import pygame
-import glm
+from pyglm import glm
 
-from mesh import Mesh
-from utils import (
-    fov_to_focal_length,
-    project_3d_point_to_screen,
-    normalized_coordinates_to_window_coordinates,
-)
-from vertex import Vertex
+from utils import *
 
-FOV = 120
+
+FOV = 90
 FOCAL_LENGTH = fov_to_focal_length(FOV)
 WINDOW_SIZE = (1280, 720)
+WINDOW_RATIO = WINDOW_SIZE[1] / WINDOW_SIZE[0]
+
+window_size = glm.vec2(WINDOW_SIZE)
+
+
+# 8 Vertices of a cube centered at (0, 0, 0)
+vertices = [
+    glm.vec3( 1.0,  1.0,  1.0),  # 0: Right,  Top,    Front
+    glm.vec3(-1.0,  1.0,  1.0),  # 1: Left,   Top,    Front
+    glm.vec3(-1.0, -1.0,  1.0),  # 2: Left,   Bottom, Front
+    glm.vec3( 1.0, -1.0,  1.0),  # 3: Right,  Bottom, Front
+    glm.vec3( 1.0,  1.0, -1.0),  # 4: Right,  Top,    Back
+    glm.vec3(-1.0,  1.0, -1.0),  # 5: Left,   Top,    Back
+    glm.vec3(-1.0, -1.0, -1.0),  # 6: Left,   Bottom, Back
+    glm.vec3( 1.0, -1.0, -1.0),  # 7: Right,  Bottom, Back
+]
+
+# 6 Faces defined as 4-index tuples (Quads) in Counter-Clockwise (CCW) order
+indices = [
+    (0, 1, 2, 3),  # Front  (+Z)
+    (5, 4, 7, 6),  # Back   (-Z)
+    (4, 0, 3, 7),  # Right  (+X)
+    (1, 5, 6, 2),  # Left   (-X)
+    (4, 5, 1, 0),  # Top    (+Y)
+    (3, 2, 6, 7),  # Bottom (-Y)
+]
+
+
 
 # pygame setup
 pygame.init()
@@ -19,57 +42,49 @@ screen = pygame.display.set_mode(WINDOW_SIZE)
 clock = pygame.time.Clock()
 running = True
 
+rot_x = 0
+rot_y = 0
 
-cube_vertices = [
-    Vertex(position=glm.vec4(-1.0, -1.0, -1.0,  1.0)), # Bottom-Left-Ba
-    Vertex(position=glm.vec4( 1.0, -1.0, -1.0,  1.0)), # Bottom-Right-B
-    Vertex(position=glm.vec4( 1.0,  1.0, -1.0,  1.0)), # Top-Right-Back
-    Vertex(position=glm.vec4(-1.0,  1.0, -1.0,  1.0)), # Top-Left-Back
-    Vertex(position=glm.vec4(-1.0, -1.0,  1.0,  1.0)), # Bottom-Left-Fr
-    Vertex(position=glm.vec4( 1.0, -1.0,  1.0,  1.0)), # Bottom-Right-F
-    Vertex(position=glm.vec4( 1.0,  1.0,  1.0,  1.0)), # Top-Right-Fron
-    Vertex(position=glm.vec4(-1.0,  1.0,  1.0,  1.0)), # Top-Left-Front
-]
+def transform(point: glm.vec3) -> glm.vec3:
+    point_4d = glm.vec4(point, 1.0)
+    point_4d = glm.rotate(rot_x, glm.vec3(1, 0, 0)) * glm.rotate(rot_y, glm.vec3(0, 1, 0)) * point_4d
+    point_4d = 0.4 * point_4d
+    point_4d += glm.vec4(0, 0, 2, 0)
 
-cube_indices = [
-  0, 2, 1,   0, 3, 2, # Back Face (-Z)
-  4, 5, 6,   4, 6, 7, # Front Face (+Z)
-  0, 4, 7,   0, 7, 3, # Left Face (-X)
-  1, 6, 5,   1, 2, 6, # Right Face (+X)
-  0, 1, 5,   0, 5, 4, # Bottom Face (-Y)
-  3, 7, 6,   3, 6, 2, # Top Face (+Y)
-]
+    return point_4d.xyz
 
-cube = Mesh(cube_vertices, cube_indices)
+def project(point: glm.vec3) -> pygame.math.Vector2:
+    return normalized_coordinates_to_window_coordinates(
+        project_3d_point_to_screen(
+            point,
+            FOCAL_LENGTH
+        ),
+        glm.vec2(WINDOW_SIZE)
+    )
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+    
 
     screen.fill((0, 0, 0))
+    rot_x += 0.01
+    rot_y += 0.02
 
-    for triangle_index in range(len(cube.indices) // 3):
-        positions: list[pygame.math.Vector2] = [
-            normalized_coordinates_to_window_coordinates(
-                point=project_3d_point_to_screen(
-                    cube.vertices[
-                        cube.indices[triangle_index * 3 + i]
-                    ].transformed(cube.transform).position,
-                    FOCAL_LENGTH
-                ),
-                window_size=glm.vec2(WINDOW_SIZE)
-            )
-            for i in range(3)
-        ]
-        colors: list[pygame.Color] = [
-            cube.vertices[cube.indices[triangle_index * 3 + i]].color
-            for i in range(3)
-        ]
+    for quad in indices:
+        pygame.draw.aalines(
+            surface=screen,
+            color="white",
+            closed=True,
+            points=[project(transform(vertices[i])) for i in quad]
+        )
+        # pygame.draw.polygon(
+        #     surface=screen,
+        #     color="white",
+        #     points=[project(vertices[i]) for i in quad]
+        # )
 
-        pygame.draw.line(screen, colors[0], positions[0], positions[1])
-        pygame.draw.line(screen, colors[1], positions[1], positions[2])
-        pygame.draw.line(screen, colors[2], positions[2], positions[0])
 
     pygame.display.flip()
 
